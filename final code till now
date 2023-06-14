@@ -1,0 +1,771 @@
+#include <vtkAutoInit.h> 
+VTK_MODULE_INIT(vtkRenderingOpenGL2); // VTK was built with vtkRenderingOpenGL2
+VTK_MODULE_INIT(vtkInteractionStyle);
+#include <vtkActor.h>
+#include <vtkCallbackCommand.h>
+#include <vtkCubeSource.h>
+#include <vtkCommand.h>
+#include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkMath.h>
+#include <vtkNamedColors.h>
+#include <vtkNew.h>
+#include <vtkOctreePointLocator.h>
+#include <vtkOutlineFilter.h>
+#include <vtkPointSource.h>
+#include <vtkPolyData.h>
+#include<vtkPolyLine.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkProperty.h>
+#include <vtkActor.h>
+#include <vtkCallbackCommand.h>
+#include <vtkCommand.h>
+#include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkMath.h>
+#include <vtkNamedColors.h>
+#include <vtkNew.h>
+#include <vtkOctreePointLocator.h>
+#include <vtkPointSource.h>
+#include <vtkPolyData.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkProperty.h>
+#include <vtkProperty2D.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
+#include <vtkRenderer.h>
+#include <vtkSliderRepresentation2D.h>
+#include <vtkSliderWidget.h>
+#include <vtkSphereSource.h>
+#include <vtkSTLReader.h>
+#include <vtkTextProperty.h>
+#include <vtkWidgetEvent.h>
+#include <vtkWidgetEventTranslator.h>
+#include<vtkPointSource.h>
+#include <cmath>
+#include <iostream>
+#include <string>
+#include <vtkTriangleFilter.h>
+#include <vtkDataSetSurfaceFilter.h>
+#include <vtkSmartPointer.h>
+#include <vtkSTLReader.h>
+#include <vtkOctreePointLocator.h>
+#include <vtkPolyData.h>
+#include <vtkIdList.h>
+#include <iostream>
+#include <set>
+#include <vtkCursor3D.h>
+#include <vtkMath.h>
+#include <vtkMath.h>
+#include<vtkSelectEnclosedPoints.h>
+#include <vtkCubeSource.h>
+#include <vtkSmartPointer.h>
+#include <vtkExtractVOI.h>
+#include <vtkImageData.h>
+#include <vtkXMLImageDataWriter.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
+#include <vtkActor.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkProperty.h>
+#include <vtkDataSetMapper.h>
+#include <new.h>
+
+
+
+
+
+
+
+
+
+
+void GetOctantVertices(double minBounds[3], double maxBounds[3], double vertices[8][3])
+{
+	// Extract the minimum and maximum coordinates of the bounding box
+	double xmin = minBounds[0];
+	double ymin = minBounds[1];
+	double zmin = minBounds[2];
+	double xmax = maxBounds[0];
+	double ymax = maxBounds[1];
+	double zmax = maxBounds[2];
+
+	// Calculate the eight vertices of the octant
+	vertices[0][0] = xmin;
+	vertices[0][1] = ymin;
+	vertices[0][2] = zmin;
+
+	vertices[1][0] = xmax;
+	vertices[1][1] = ymin;
+	vertices[1][2] = zmin;
+
+	vertices[2][0] = xmax;
+	vertices[2][1] = ymax;
+	vertices[2][2] = zmin;
+
+	vertices[3][0] = xmin;
+	vertices[3][1] = ymax;
+	vertices[3][2] = zmin;
+
+	vertices[4][0] = xmin;
+	vertices[4][1] = ymin;
+	vertices[4][2] = zmax;
+
+	vertices[5][0] = xmax;
+	vertices[5][1] = ymin;
+	vertices[5][2] = zmax;
+
+	vertices[6][0] = xmax;
+	vertices[6][1] = ymax;
+	vertices[6][2] = zmax;
+
+	vertices[7][0] = xmin;
+	vertices[7][1] = ymax;
+	vertices[7][2] = zmax;
+}
+
+void filltest(double x, double y, double z, double test[3]) {
+	test[0] = x;
+	test[1] = y;
+	test[2] = z;
+}
+
+
+
+
+int main()
+{
+
+
+
+
+
+	vtkNew<vtkNamedColors> colors;
+
+
+
+
+	//std::string stl_file = "C:\\Users\\vipul.k\\Desktop\\Horn.stl";
+	//// Create a point cloud
+	//vtkNew<vtkSTLReader> reader;
+	//reader->SetFileName(stl_file.c_str());
+	//reader->Update();
+	//vtkNew<vtkPolyDataMapper> pointsMapper;
+	//pointsMapper->SetInputData(reader->GetOutput());
+	//vtkNew<vtkActor> pointsActor;
+	//pointsActor->SetMapper(pointsMapper);
+	//pointsActor->GetProperty()->SetInterpolationToFlat();
+	//pointsActor->GetProperty()->SetRepresentationToPoints();
+	//pointsActor->GetProperty()->SetColor(colors->GetColor4d("Yellow").GetData());
+
+
+
+	std::string stl_file = "D:\\DOWNLOADS\\cylinder.stl";
+
+	//   "D:\\DOWNLOADS\\cylinder.stl" "C:\\Users\\dell\\Documents\\Sample.stl"
+
+	// Read the STL file
+	vtkNew<vtkSTLReader> reader;
+	reader->SetFileName(stl_file.c_str());
+	reader->Update();
+
+	vtkPolyData* shape = reader->GetOutput();
+
+	vtkSmartPointer<vtkPolyData> polyData = reader->GetOutput();
+	// Get the points (i.e. vertices)
+	// Get the points (i.e. vertices)
+	//vtkSmartPointer<vtkPoints> points = polyData->GetPoints();
+
+	//// Print out the coordinates of each vertex
+	//for (vtkIdType i = 0; i < points->GetNumberOfPoints(); i++)
+	//{
+	//	double* p = points->GetPoint(i);
+	//	std::cout << "Vertex " << i << ": (" << p[0] << ", " << p[1] << ", " << p[2] << ")" << std::endl;
+	//}
+	///////
+	//
+	//
+	double c[3];
+	shape->GetCenter(c);
+	cout << "center   " << c[0] << " " << c[1] << " " << c[2] << endl;
+
+	// Convert polygons to triangles
+	vtkNew<vtkTriangleFilter> triangleFilter;
+	triangleFilter->SetInputData(reader->GetOutput());
+	triangleFilter->Update();
+
+
+
+	// Create a mapper for the triangles
+	vtkNew<vtkPolyDataMapper> triangleMapper;
+	triangleMapper->SetInputData(triangleFilter->GetOutput());
+
+
+
+	// Create an actor for the triangles
+	vtkNew<vtkActor> triangleActor;
+	triangleActor->SetMapper(triangleMapper);
+	triangleActor->GetProperty()->SetInterpolationToFlat();
+	triangleActor->GetProperty()->SetColor(colors->GetColor4d("Red").GetData());
+	triangleActor->GetProperty()->SetOpacity(0.7);
+
+
+
+	// Step 2: Create a bounding box using vtkBoundingBox
+	vtkBoundingBox boundingBox;
+	boundingBox.SetBounds(shape->GetBounds());
+	//
+	// 
+
+
+
+	//maximum length in bounding box
+	double length[3];
+	boundingBox.GetLengths(length);
+	cout << length[0] << " " << length[1] << " " << length[2] << endl;
+	// Find the maximum side length among x, y, and z dimensions
+	double maxlength = std::max(length[0], std::max(length[1], length[2]));
+	cout << "maxlength" << maxlength << endl;
+	boundingBox.Inflate((maxlength - length[0]) / 2, (maxlength - length[1]) / 2, (maxlength - length[2]) / 2);
+
+	double ll[3];
+	boundingBox.GetLengths(ll);
+	cout << ll[0] << " " << ll[1] << " " << ll[2];
+	double center[3];
+	boundingBox.GetCenter(center);
+
+	vtkSmartPointer<vtkCubeSource> cubeSource = vtkSmartPointer<vtkCubeSource>::New();
+	//double bound[6];
+	//boundingBox.GetBounds(bound);
+	//cubeSource->SetBounds(bound);
+
+	cubeSource->SetCenter(center);
+	cubeSource->SetXLength(maxlength);
+	cubeSource->SetYLength(maxlength);
+	cubeSource->SetZLength(maxlength);
+	cubeSource->Update();
+	//
+	// 
+	// 
+	// 
+	// 
+
+	double center1[3];
+	cubeSource->GetCenter(center1);
+	cout << "center of cubesource " << center1[0] << " " << center1[1] << " " << center1[2] << endl;
+
+	double cubebound[6] = { 0 };
+	cubeSource->GetBounds(cubebound);
+
+	//// Access the coordinates of the minimum and maximum points
+	double xmin = cubebound[0];
+	double ymin = cubebound[2];
+	double zmin = cubebound[4];
+
+	double xmax = cubebound[1];
+	double ymax = cubebound[3];
+	double zmax = cubebound[5];
+
+	//// Use the coordinates (xmin, ymin, zmin) and (xmax, ymax, zmax) as needed
+	std::cout << "Minimum point: (" << xmin << ", " << ymin << ", " << zmin << ")" << std::endl;
+	std::cout << "Maximum point: (" << xmax << ", " << ymax << ", " << zmax << ")" << std::endl;
+
+
+	//enter the size of voxel
+	cout << "enter the size of voxel" << endl;
+	double voxelsize;
+	cin >> voxelsize;
+
+	int voxelid = 1;
+	double cord[3] = { xmin + (voxelsize / 2) ,ymin + (voxelsize / 2),zmin + (voxelsize / 2) };
+	double duplicate[3] = { xmin + (voxelsize / 2) ,ymin + (voxelsize / 2),zmin + (voxelsize / 2) };
+
+	int dimension = maxlength / voxelsize;
+	int insideoct = 0;
+	int outsideoct = 0;
+	int partialoct = 0;
+	cout << "center" << cord[0] << " " << cord[1] << " " << cord[2] << endl;
+	//cout << "dimenstion" << dimension;
+	// 
+	// 
+	//first 25 voxel in same vertical 
+	//first 5 voxel in same horizontal..
+	//drawing for 60th voxel
+	vtkSmartPointer<vtkPoints> linepoints = vtkSmartPointer<vtkPoints>::New();
+
+
+	vtkSmartPointer<vtkPoints> line1 = vtkSmartPointer<vtkPoints>::New();
+	vtkSmartPointer<vtkPoints> line2 = vtkSmartPointer<vtkPoints>::New();
+	vtkSmartPointer<vtkPoints> line3 = vtkSmartPointer<vtkPoints>::New();
+	vtkSmartPointer<vtkPoints> line4 = vtkSmartPointer<vtkPoints>::New();
+
+
+	int no_of_points = 0;
+	//checking for octants which are in bottom
+	int bottomcheck = 0;
+	//when to stop building the line when bottom reaached
+	int stop = 0;
+	//bottom floor y value
+	int bottom_y = duplicate[1] + voxelsize * (dimension - 1);
+
+	cout << "bottom y is" << bottom_y << endl;
+	for (int z = 0; z < dimension; z++) {
+		cord[2] = duplicate[2] + z * voxelsize;
+		for (int y = 0; y < dimension; y++) {
+			cord[1] = duplicate[1] + y * voxelsize;
+			for (int x = 0; x < dimension; x++) {
+				cord[0] = duplicate[0] + x * voxelsize;
+				cout << "voxelid " << voxelid << " cordinates  (" << cord[0] << " " << cord[1] << " " << cord[2] << ") " << endl;
+				double center[3];
+				filltest(cord[0], cord[1], cord[2], center);
+				//drawing for 60th voxel
+				double linep[3];
+				
+
+
+
+
+
+
+				
+				//insdie,outside,partial
+				double minb[3], maxb[3];
+				minb[0] = cord[0] - ((0.5) * voxelsize);
+				minb[1] = cord[1] - ((0.5) * voxelsize);
+				minb[2] = cord[2] - ((0.5) * voxelsize);
+				//cout << "minbbbb " << minb[0] << " " << minb[1] << " " << minb[2] << endl;
+				maxb[0] = cord[0] + ((0.5) * voxelsize);
+				maxb[1] = cord[1] + ((0.5) * voxelsize);
+				maxb[2] = cord[2] + ((0.5) * voxelsize);
+
+				double vertices[8][3];
+				GetOctantVertices(minb, maxb, vertices);
+
+
+				int inside = 0;
+				int outside = 0;
+
+				vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+				double test0[3];
+				double test1[3];
+				double test2[3];
+				double test3[3];
+				double test4[3];
+				double test5[3];
+				double test6[3];
+				double test7[3];
+
+
+				filltest(vertices[0][0], vertices[0][1], vertices[0][2], test0);
+				points->InsertNextPoint(test0);
+				filltest(vertices[1][0], vertices[1][1], vertices[1][2], test1);
+				points->InsertNextPoint(test1);
+				filltest(vertices[2][0], vertices[2][1], vertices[2][2], test2);
+				points->InsertNextPoint(test2);
+				filltest(vertices[3][0], vertices[3][1], vertices[3][2], test3);
+				points->InsertNextPoint(test3);
+				filltest(vertices[4][0], vertices[4][1], vertices[4][2], test4);
+				points->InsertNextPoint(test4);
+				filltest(vertices[5][0], vertices[5][1], vertices[5][2], test5);
+				points->InsertNextPoint(test5);
+				filltest(vertices[6][0], vertices[6][1], vertices[6][2], test6);
+				points->InsertNextPoint(test6);
+				filltest(vertices[7][0], vertices[7][1], vertices[7][2], test7);
+				points->InsertNextPoint(test7);
+
+				//cout << "test0" << test0[0] << " " << test0[1] << " " << test0[2] << endl;
+
+				
+				/*vtkSmartPointer<vtkPoints> points1 = vtkSmartPointer<vtkPoints>::New();
+				double test[3] = {2.5,5.5,5.5};
+				points1->InsertNextPoint(test);
+				vtkSmartPointer<vtkPolyData> pointsPolydata1 = vtkSmartPointer<vtkPolyData>::New();;
+				pointsPolydata1->SetPoints(points1);
+				vtkSmartPointer<vtkSelectEnclosedPoints> selectEnclosedPoints1 = vtkSmartPointer<vtkSelectEnclosedPoints>::New();;
+				selectEnclosedPoints1->SetInputData(pointsPolydata1);
+				selectEnclosedPoints1->SetSurfaceData(shape);
+				selectEnclosedPoints1->Update();
+				if (selectEnclosedPoints1->IsInside(0) == 1) cout << "iiiiiiinside";
+				else cout << "outsideeeee";*/
+
+				vtkSmartPointer<vtkPolyData> pointsPolydata = vtkSmartPointer<vtkPolyData>::New();;
+				pointsPolydata->SetPoints(points);
+				vtkSmartPointer<vtkSelectEnclosedPoints> selectEnclosedPoints = vtkSmartPointer<vtkSelectEnclosedPoints>::New();;
+				selectEnclosedPoints->SetInputData(pointsPolydata);
+				selectEnclosedPoints->SetSurfaceData(shape);
+				selectEnclosedPoints->Update();
+
+				for (unsigned int xx = 0; xx < 8; xx++) {
+
+					if (selectEnclosedPoints->IsInside(xx) == 1)
+					{
+						inside++;
+					}
+					else
+					{
+						outside++;
+					}
+
+				}
+
+				int boolcheck = 0;
+
+				if (inside == 8) {
+					insideoct++;
+					cout << "insideoctant" << endl;
+					boolcheck = 0;
+				}
+				else {
+					if (outside == 8) {
+						outsideoct++;
+						cout << "outsideocatnat" << endl;
+						boolcheck = 1;
+					}
+					else {
+						partialoct++;
+						cout << "partialoctant" << endl;
+						boolcheck = 2;
+					}
+				}
+
+
+				
+				
+					if (boolcheck == 2 && bottomcheck == 0) bottomcheck = 1;
+					if (boolcheck == 0 && bottomcheck == 1) bottomcheck = 2;
+					if (boolcheck == 2 && bottomcheck == 2) {
+						bottomcheck = 3;
+						
+					}
+					if (boolcheck == 0 && bottomcheck == 3) bottomcheck = 2;
+					if (boolcheck == 1 && bottomcheck == 3) bottomcheck = 2;
+				
+					if(bottomcheck==3) cout << "   above this is a  bottom octants " << endl;
+				//voxelid to which support is drawn;
+				 int vid = 66;
+				//cout << " vid is        " << vid << endl;
+				
+				//voxelid== 5,35,60 && (boolcheck==1 ||voxelid==60 )
+				//voxelid >= 60 && voxelid <= 125 && (voxelid) % 1 == 0 && (boolcheck == 1 || voxelid == 60)
+				if (voxelid >= vid && voxelid <= 125 && (voxelid-vid) % 5 == 0 && (boolcheck == 1 || voxelid == vid) && stop==0){
+					cout << "                                          vvvvvvvvvvvvvvvv" << voxelid << endl;
+					filltest(cord[0], cord[1], cord[2], linep);
+					linepoints->InsertNextPoint(linep);
+					no_of_points++;
+
+					if (cord[1] == bottom_y) stop = 1;
+				}
+
+				//4 lines connecting the top points with center for partial octant
+				
+				if (voxelid == vid) {
+					
+					
+					line1->InsertNextPoint(center);
+					line1->InsertNextPoint(test0);
+					cout << "center " << center[0] << " " << center[1] << " " << center[2] << endl;
+					cout << "test0  " << test0[0] << " " << test0[1] << " " << test0[2] << endl;
+					cout << "test1  " << test1[0] << " " << test1[1] << " " << test1[2] << endl;
+					cout << "test4  " << test4[0] << " " << test4[1] << " " << test4[2] << endl;
+					cout << "test5  " << test5[0] << " " << test5[1] << " " << test5[2] << endl;
+					line2->InsertNextPoint(center);
+					line2->InsertNextPoint(test1);
+					line3->InsertNextPoint(center);
+					line3->InsertNextPoint(test4);
+					line4->InsertNextPoint(center);
+					line4->InsertNextPoint(test5);
+				}
+
+
+				voxelid++;
+			}
+		}
+	}
+
+	cout << "no of inside octant" << insideoct << endl;
+	cout << "no of outside octant" << outsideoct << endl;
+	cout << "no of partial octant" << partialoct << endl;
+
+	//drawing 60th voxel
+	/*linepoints->InsertNextPoint(1.5, 0.5, 3.5);
+	linepoints->InsertNextPoint(1.5, 1.5, 3.5);
+	no_of_points = 2;*/
+	vtkNew<vtkPolyLine> polyLine;
+	polyLine->GetPointIds()->SetNumberOfIds(no_of_points);
+	for (unsigned int i = 0; i < no_of_points; i++)
+	{
+		polyLine->GetPointIds()->SetId(i, i);
+	}
+
+	// Create a cell array to store the lines in and add the lines to it
+	vtkNew<vtkCellArray> cells;
+	cells->InsertNextCell(polyLine);
+
+	// Create a polydata to store everything in
+	vtkNew<vtkPolyData> linepolyData;
+
+	// Add the points to the dataset
+	linepolyData->SetPoints(linepoints);
+
+	// Add the lines to the dataset
+	linepolyData->SetLines(cells);
+
+	// Setup actor and mapper
+	vtkNew<vtkPolyDataMapper> linemapper;
+	linemapper->SetInputData(linepolyData);
+
+	vtkNew<vtkActor> lineactor;
+	lineactor->SetMapper(linemapper);
+	lineactor->GetProperty()->SetColor(colors->GetColor3d("black").GetData());
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	// Create mapper and actor for the bounding box
+	vtkSmartPointer<vtkPolyDataMapper> mapper1 = vtkSmartPointer<vtkPolyDataMapper>::New();
+	mapper1->SetInputData(cubeSource->GetOutput());
+	vtkSmartPointer<vtkActor> actor1 = vtkSmartPointer<vtkActor>::New();
+	actor1->GetProperty()->SetOpacity(0.3);
+	actor1->SetMapper(mapper1);
+
+
+
+//line 1
+
+	vtkNew<vtkPolyLine> polyLine1;
+	polyLine1->GetPointIds()->SetNumberOfIds(2);
+
+	for (unsigned int i = 0; i < 2; i++)
+	{
+		polyLine1->GetPointIds()->SetId(i, i);
+	}
+
+	// Create a cell array to store the lines in and add the lines to it
+	vtkNew<vtkCellArray> cells1;
+	cells1->InsertNextCell(polyLine1);
+
+	// Create a polydata to store everything in
+	vtkNew<vtkPolyData> linepolyData1;
+
+	// Add the points to the dataset
+	linepolyData1->SetPoints(line1);
+
+	// Add the lines to the dataset
+	linepolyData1->SetLines(cells1);
+
+	// Setup actor and mapper
+	vtkNew<vtkPolyDataMapper> linemapper1;
+	linemapper1->SetInputData(linepolyData1);
+
+	vtkNew<vtkActor> lineactor1;
+	lineactor1->SetMapper(linemapper1);
+	lineactor1->GetProperty()->SetColor(colors->GetColor3d("black").GetData());
+	//lineactor1->GetProperty()->SetLineWidth(5);
+
+
+
+
+
+//line 2
+	vtkNew<vtkPolyLine> polyLine2;
+	polyLine2->GetPointIds()->SetNumberOfIds(2);
+	for (unsigned int i = 0; i < 2; i++)
+	{
+		polyLine2->GetPointIds()->SetId(i, i);
+	}
+
+	// Create a cell array to store the lines in and add the lines to it
+	vtkNew<vtkCellArray> cells2;
+	cells2->InsertNextCell(polyLine2);
+
+	// Create a polydata to store everything in
+	vtkNew<vtkPolyData> linepolyData2;
+
+	// Add the points to the dataset
+	linepolyData2->SetPoints(line2);
+
+	// Add the lines to the dataset
+	linepolyData2->SetLines(cells2);
+
+	// Setup actor and mapper
+	vtkNew<vtkPolyDataMapper> linemapper2;
+	linemapper2->SetInputData(linepolyData2);
+
+	vtkNew<vtkActor> lineactor2;
+	lineactor2->SetMapper(linemapper2);
+	lineactor2->GetProperty()->SetColor(colors->GetColor3d("black").GetData());
+
+	
+
+//  line3
+
+	vtkNew<vtkPolyLine> polyLine3;
+	polyLine3->GetPointIds()->SetNumberOfIds(2);
+	for (unsigned int i = 0; i < 2; i++)
+	{
+		polyLine3->GetPointIds()->SetId(i, i);
+	}
+
+	// Create a cell array to store the lines in and add the lines to it
+	vtkNew<vtkCellArray> cells3;
+	cells3->InsertNextCell(polyLine3);
+
+	// Create a polydata to store everything in
+	vtkNew<vtkPolyData> linepolyData3;
+
+	// Add the points to the dataset
+	linepolyData3->SetPoints(line3);
+
+	// Add the lines to the dataset
+	linepolyData3->SetLines(cells3);
+
+	// Setup actor and mapper
+	vtkNew<vtkPolyDataMapper> linemapper3;
+	linemapper3->SetInputData(linepolyData3);
+
+	vtkNew<vtkActor> lineactor3;
+	lineactor3->SetMapper(linemapper3);
+	lineactor3->GetProperty()->SetColor(colors->GetColor3d("black").GetData());
+
+
+
+	//line 4
+
+	vtkNew<vtkPolyLine> polyLine4;
+	polyLine4->GetPointIds()->SetNumberOfIds(2);
+	for (unsigned int i = 0; i < 2; i++)
+	{
+		polyLine4->GetPointIds()->SetId(i, i);
+	}
+
+	// Create a cell array to store the lines in and add the lines to it
+	vtkNew<vtkCellArray> cells4;
+	cells4->InsertNextCell(polyLine4);
+
+	// Create a polydata to store everything in
+	vtkNew<vtkPolyData> linepolyData4;
+
+	// Add the points to the dataset
+	linepolyData4->SetPoints(line4);
+
+	// Add the lines to the dataset
+	linepolyData4->SetLines(cells4);
+
+	// Setup actor and mapper
+	vtkNew<vtkPolyDataMapper> linemapper4;
+	linemapper4->SetInputData(linepolyData4);
+
+	vtkNew<vtkActor> lineactor4;
+	lineactor4->SetMapper(linemapper4);
+	lineactor4->GetProperty()->SetColor(colors->GetColor3d("black").GetData());
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		// A renderer and render window
+	vtkNew<vtkRenderer> renderer;
+	vtkNew<vtkRenderWindow> renderWindow;
+	renderWindow->AddRenderer(renderer);
+
+
+	// An interactor
+	vtkNew<vtkRenderWindowInteractor> renderWindowInteractor;
+	renderWindowInteractor->SetRenderWindow(renderWindow);
+
+
+
+	// Add the actors to the scene
+	renderer->AddActor(triangleActor);
+	//renderer->AddActor(octreeActor);
+	//renderer->AddActor(stlactor);
+	renderer->AddActor(actor1);
+	renderer->AddActor(lineactor);
+	renderer->AddActor(lineactor1);
+	renderer->AddActor(lineactor2);
+	renderer->AddActor(lineactor3);
+	renderer->AddActor(lineactor4);
+	renderer->SetBackground(colors->GetColor3d("MidnightBlue").GetData());
+
+
+
+	// Render an image (lights and cameras are created automatically)
+	renderWindow->SetWindowName("OctreeVisualize");
+	renderWindow->SetSize(600, 600);
+	renderWindow->Render();
+
+	//vtkNew<vtkSliderRepresentation2D> sliderRep;
+	//sliderRep->SetMinimumValue(0);
+	////sliderRep->SetMaximumValue(octree->GetLevel());
+	//sliderRep->SetValue(0);
+	//sliderRep->SetTitleText("Level");
+	//sliderRep->GetPoint1Coordinate()->SetCoordinateSystemToNormalizedDisplay();
+	//sliderRep->GetPoint1Coordinate()->SetValue(.2, .2);
+	//sliderRep->GetPoint2Coordinate()->SetCoordinateSystemToNormalizedDisplay();
+	//sliderRep->GetPoint2Coordinate()->SetValue(.8, .2);
+	//sliderRep->SetSliderLength(0.075);
+	//sliderRep->SetSliderWidth(0.05);
+	//sliderRep->SetEndCapLength(0.05);
+	//sliderRep->GetTitleProperty()->SetColor(
+	//	colors->GetColor3d("Beige").GetData());
+	//sliderRep->GetCapProperty()->SetColor(
+	//	colors->GetColor3d("MistyRose").GetData());
+	//sliderRep->GetSliderProperty()->SetColor(
+	//	colors->GetColor3d("LightBlue").GetData());
+	//sliderRep->GetSelectedProperty()->SetColor(
+	//	colors->GetColor3d("Violet").GetData());
+
+
+
+	//vtkNew<vtkSliderWidget> sliderWidget;
+	//sliderWidget->SetInteractor(renderWindowInteractor);
+	//sliderWidget->SetRepresentation(sliderRep);
+	//sliderWidget->SetAnimationModeToAnimate();
+	//sliderWidget->EnabledOn();
+
+
+	//vtkNew<vtkSliderCallback> callback;
+	////callback->Octree = octree;
+	////callback->PolyData = polydata;
+	//callback->Renderer = renderer;
+
+	//sliderWidget->AddObserver(vtkCommand::InteractionEvent, callback);
+
+	renderWindowInteractor->Initialize();
+	renderWindow->Render();
+	renderWindowInteractor->Start();
+	return EXIT_SUCCESS;
+}
