@@ -1,0 +1,794 @@
+#include <vtkAutoInit.h> 
+VTK_MODULE_INIT(vtkRenderingOpenGL2); // VTK was built with vtkRenderingOpenGL2
+VTK_MODULE_INIT(vtkInteractionStyle);
+#include <vtkActor.h>
+#include <vtkCallbackCommand.h>
+#include <vtkCubeSource.h>
+#include <vtkCommand.h>
+#include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkMath.h>
+#include <vtkNamedColors.h>
+#include <vtkNew.h>
+#include <vtkOctreePointLocator.h>
+#include <vtkOutlineFilter.h>
+#include <vtkPointSource.h>
+#include <vtkPolyData.h>
+#include<vtkPolyLine.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkProperty.h>
+#include <vtkActor.h>
+#include <vtkCallbackCommand.h>
+#include <vtkCommand.h>
+#include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkMath.h>
+#include <vtkNamedColors.h>
+#include <vtkNew.h>
+#include <vtkOctreePointLocator.h>
+#include <vtkPointSource.h>
+#include <vtkPolyData.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkProperty.h>
+#include <vtkProperty2D.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
+#include <vtkRenderer.h>
+#include <vtkSliderRepresentation2D.h>
+#include <vtkSliderWidget.h>
+#include <vtkSphereSource.h>
+#include <vtkSTLReader.h>
+#include <vtkTextProperty.h>
+#include <vtkWidgetEvent.h>
+#include <vtkWidgetEventTranslator.h>
+#include<vtkPointSource.h>
+#include <cmath>
+#include <iostream>
+#include <string>
+#include <vtkTriangleFilter.h>
+#include <vtkDataSetSurfaceFilter.h>
+#include <vtkSmartPointer.h>
+#include <vtkSTLReader.h>
+#include <vtkOctreePointLocator.h>
+#include <vtkPolyData.h>
+#include <vtkIdList.h>
+#include <iostream>
+#include <set>
+#include <vtkCursor3D.h>
+#include <vtkMath.h>
+#include <vtkMath.h>
+#include<vtkSelectEnclosedPoints.h>
+#include <vtkCubeSource.h>
+#include <vtkSmartPointer.h>
+#include <vtkExtractVOI.h>
+#include <vtkImageData.h>
+#include <vtkXMLImageDataWriter.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
+#include <vtkActor.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkProperty.h>
+#include <vtkDataSetMapper.h>
+#include <new.h>
+
+
+
+
+
+
+
+
+
+
+void GetOctantVertices(double minBounds[3], double maxBounds[3], double vertices[8][3])
+{
+	// Extract the minimum and maximum coordinates of the bounding box
+	double xmin = minBounds[0];
+	double ymin = minBounds[1];
+	double zmin = minBounds[2];
+	double xmax = maxBounds[0];
+	double ymax = maxBounds[1];
+	double zmax = maxBounds[2];
+
+	// Calculate the eight vertices of the octant
+	vertices[0][0] = xmin;
+	vertices[0][1] = ymin;
+	vertices[0][2] = zmin;
+
+	vertices[1][0] = xmax;
+	vertices[1][1] = ymin;
+	vertices[1][2] = zmin;
+
+	vertices[2][0] = xmax;
+	vertices[2][1] = ymax;
+	vertices[2][2] = zmin;
+
+	vertices[3][0] = xmin;
+	vertices[3][1] = ymax;
+	vertices[3][2] = zmin;
+
+	vertices[4][0] = xmin;
+	vertices[4][1] = ymin;
+	vertices[4][2] = zmax;
+
+	vertices[5][0] = xmax;
+	vertices[5][1] = ymin;
+	vertices[5][2] = zmax;
+
+	vertices[6][0] = xmax;
+	vertices[6][1] = ymax;
+	vertices[6][2] = zmax;
+
+	vertices[7][0] = xmin;
+	vertices[7][1] = ymax;
+	vertices[7][2] = zmax;
+}
+
+void filltest(double x, double y, double z, double test[3]) {
+	test[0] = x;
+	test[1] = y;
+	test[2] = z;
+}
+
+//left right front back  down
+//current voxel id and bmap
+
+int leftvoxel(int voxelid,int voxelsize, std::map<int, std::pair<char, std::vector<double>>> bmap,int maxoct) {
+	if (voxelid < 2) return -1;
+	if (voxelid > maxoct)return -1;
+	std::vector<double> cord = bmap[voxelid].second;
+
+	std::vector<double> leftcord = bmap[voxelid - 1].second;
+	
+	if ((leftcord[0] == cord[0] - voxelsize) && (leftcord[1] == cord[1]) && (leftcord[2] == cord[2])) {
+		cout << "left voxel type  " << bmap[voxelid - 1].first<<endl;
+		return  voxelid - 1;
+	}
+	//dont exist
+	return -1;
+}
+
+//right
+int rightvoxel(int voxelid, int voxelsize, std::map<int, std::pair<char, std::vector<double>>> bmap,int maxoct) {
+	
+	if (voxelid >= maxoct) return -1;
+	if (voxelid < 1) return -1;
+
+	std::vector<double> cord = bmap[voxelid].second;
+
+	std::vector<double> leftcord = bmap[voxelid + 1].second;
+
+	if ((leftcord[0] == cord[0] + voxelsize) && (leftcord[1] == cord[1]) && (leftcord[2] == cord[2])) {
+		cout << "right voxel type  " << bmap[voxelid - 1].first << endl;
+		return  voxelid + 1;
+	}
+
+	return -1;
+}
+
+//bottom
+int bottomvoxel(int voxelid, int voxelsize, std::map<int, std::pair<char, std::vector<double>>> bmap, int maxoct) {
+	
+	if (voxelid > maxoct) return -1;
+	if (voxelid <= 1) return -1;
+	int minus = std::cbrt(maxoct);
+	std::vector<double> cord = bmap[voxelid].second;
+
+	if (voxelid - minus <= 0) return -1;
+	std::vector<double> leftcord = bmap[voxelid - minus].second;
+
+	if ((leftcord[0] == cord[0]) && (leftcord[1] == cord[1]-voxelsize) && (leftcord[2] == cord[2])) {
+		cout << "bottom voxel type  " << bmap[voxelid - minus].first << endl;
+		return  voxelid - minus;
+	}
+
+	return -1;
+}
+
+//front
+int frontvoxel(int voxelid, int voxelsize, std::map<int, std::pair<char, std::vector<double>>> bmap, int maxoct) {
+
+	if (voxelid > maxoct) return -1;
+	if (voxelid <= 1) return -1;
+	double minus = std::cbrt(maxoct);
+	minus = minus * minus;
+	std::vector<double> cord = bmap[voxelid].second;
+	if (voxelid - minus <= 0) return -1;
+	std::vector<double> leftcord = bmap[voxelid - minus].second;
+
+	if ((leftcord[0] == cord[0]) && (leftcord[1] == cord[1]) && (leftcord[2] == cord[2]-voxelsize)) {
+		cout << "front voxel type  " << bmap[voxelid - minus].first << endl;
+		return  voxelid - minus;
+	}
+
+	return -1;
+}
+
+//back
+int backvoxel(int voxelid, int voxelsize, std::map<int, std::pair<char, std::vector<double>>> bmap, int maxoct) {
+
+	if (voxelid >= maxoct) return -1;
+	if (voxelid < 1) return -1;
+	int minus = std::cbrt(maxoct);
+	//no of voxels
+	minus = minus * minus;
+	std::vector<double> cord = bmap[voxelid].second;
+	if (voxelid + minus > maxoct) return -1;
+	std::vector<double> leftcord = bmap[voxelid + minus].second;
+
+	if ((leftcord[0] == cord[0]) && (leftcord[1] == cord[1]) && (leftcord[2] == cord[2] + voxelsize)) {
+		cout << "back voxel type  " << bmap[voxelid + minus].first << endl;
+		return  voxelid + minus;
+	}
+
+	return -1;
+}
+
+
+int main()
+{
+
+
+
+
+
+	vtkNew<vtkNamedColors> colors;
+
+
+
+
+	//std::string stl_file = "C:\\Users\\vipul.k\\Desktop\\Horn.stl";
+	//// Create a point cloud
+	//vtkNew<vtkSTLReader> reader;
+	//reader->SetFileName(stl_file.c_str());
+	//reader->Update();
+	//vtkNew<vtkPolyDataMapper> pointsMapper;
+	//pointsMapper->SetInputData(reader->GetOutput());
+	//vtkNew<vtkActor> pointsActor;
+	//pointsActor->SetMapper(pointsMapper);
+	//pointsActor->GetProperty()->SetInterpolationToFlat();
+	//pointsActor->GetProperty()->SetRepresentationToPoints();
+	//pointsActor->GetProperty()->SetColor(colors->GetColor4d("Yellow").GetData());
+
+
+
+	std::string stl_file = "D:\\DOWNLOADS\\cylinder.stl";
+
+	// "D:\\DOWNLOADS\\cat.stl"  "D:\\DOWNLOADS\\cylinder.stl" "C:\\Users\\dell\\Documents\\Sample.stl"
+
+	// Read the STL file
+	vtkNew<vtkSTLReader> reader;
+	reader->SetFileName(stl_file.c_str());
+	reader->Update();
+
+	vtkPolyData* shape = reader->GetOutput();
+
+	vtkSmartPointer<vtkPolyData> polyData = reader->GetOutput();
+	// Get the points (i.e. vertices)
+	// Get the points (i.e. vertices)
+	//vtkSmartPointer<vtkPoints> points = polyData->GetPoints();
+
+	//// Print out the coordinates of each vertex
+	//for (vtkIdType i = 0; i < points->GetNumberOfPoints(); i++)
+	//{
+	//	double* p = points->GetPoint(i);
+	//	std::cout << "Vertex " << i << ": (" << p[0] << ", " << p[1] << ", " << p[2] << ")" << std::endl;
+	//}
+	///////
+	//
+	//
+	double c[3];
+	shape->GetCenter(c);
+	cout << "center   " << c[0] << " " << c[1] << " " << c[2] << endl;
+
+	// Convert polygons to triangles
+	vtkNew<vtkTriangleFilter> triangleFilter;
+	triangleFilter->SetInputData(reader->GetOutput());
+	triangleFilter->Update();
+
+
+
+	// Create a mapper for the triangles
+	vtkNew<vtkPolyDataMapper> triangleMapper;
+	triangleMapper->SetInputData(triangleFilter->GetOutput());
+
+
+
+	// Create an actor for the triangles
+	vtkNew<vtkActor> triangleActor;
+	triangleActor->SetMapper(triangleMapper);
+	triangleActor->GetProperty()->SetInterpolationToFlat();
+	triangleActor->GetProperty()->SetColor(colors->GetColor4d("Red").GetData());
+	triangleActor->GetProperty()->SetOpacity(0.7);
+
+
+
+	// Step 2: Create a bounding box using vtkBoundingBox
+	vtkBoundingBox boundingBox;
+	boundingBox.SetBounds(shape->GetBounds());
+	//
+	// 
+
+
+
+	//maximum length in bounding box
+	double length[3];
+	boundingBox.GetLengths(length);
+	cout << length[0] << " " << length[1] << " " << length[2] << endl;
+	// Find the maximum side length among x, y, and z dimensions
+	double maxlength = std::max(length[0], std::max(length[1], length[2]));
+	cout << "maxlength" << maxlength << endl;
+	boundingBox.Inflate((maxlength - length[0]) / 2, (maxlength - length[1]) / 2, (maxlength - length[2]) / 2);
+
+	double ll[3];
+	boundingBox.GetLengths(ll);
+	cout << ll[0] << " " << ll[1] << " " << ll[2];
+	double center[3];
+	boundingBox.GetCenter(center);
+
+	vtkSmartPointer<vtkCubeSource> cubeSource = vtkSmartPointer<vtkCubeSource>::New();
+	//double bound[6];
+	//boundingBox.GetBounds(bound);
+	//cubeSource->SetBounds(bound);
+
+	cubeSource->SetCenter(center);
+	cubeSource->SetXLength(maxlength);
+	cubeSource->SetYLength(maxlength);
+	cubeSource->SetZLength(maxlength);
+	cubeSource->Update();
+	//
+	// 
+	// 
+	// 
+	// 
+
+	double center1[3];
+	cubeSource->GetCenter(center1);
+	cout << "center of cubesource " << center1[0] << " " << center1[1] << " " << center1[2] << endl;
+
+	double cubebound[6] = { 0 };
+	cubeSource->GetBounds(cubebound);
+
+	//// Access the coordinates of the minimum and maximum points
+	double xmin = cubebound[0];
+	double ymin = cubebound[2];
+	double zmin = cubebound[4];
+
+	double xmax = cubebound[1];
+	double ymax = cubebound[3];
+	double zmax = cubebound[5];
+
+	//// Use the coordinates (xmin, ymin, zmin) and (xmax, ymax, zmax) as needed
+	std::cout << "Minimum point: (" << xmin << ", " << ymin << ", " << zmin << ")" << std::endl;
+	std::cout << "Maximum point: (" << xmax << ", " << ymax << ", " << zmax << ")" << std::endl;
+
+
+	//enter the size of voxel
+	cout << "enter the size of voxel" << endl;
+	double voxelsize;
+	cin >> voxelsize;
+
+	int voxelid = 1;
+	double cord[3] = { xmin + (voxelsize / 2) ,ymin + (voxelsize / 2),zmin + (voxelsize / 2) };
+	double duplicate[3] = { xmin + (voxelsize / 2) ,ymin + (voxelsize / 2),zmin + (voxelsize / 2) };
+
+	int dimension = maxlength / voxelsize;
+	int insideoct = 0;
+	int outsideoct = 0;
+	int partialoct = 0;
+	cout << "center" << cord[0] << " " << cord[1] << " " << cord[2] << endl;
+	
+	
+	
+	
+	//cout << "dimenstion" << dimension;
+	// 
+	//       
+	//first 25 voxel in same vertical 
+	//first 5 voxel in same horizontal..
+	//drawing for 60th voxel
+
+
+
+	int no_of_points = 0;
+	//checking for octants which are in bottom
+	int bottomcheck = 0;
+	//when to stop building the line when bottom reaached
+	int stop = 0;
+	//bottom floor y value (lowest y axis)..
+	//int bottom_y = duplicate[1] + (voxelsize * dimension) - voxelsize;
+	double bottom_y = duplicate[1];
+	cout << "bottom y is" << bottom_y << endl;
+
+	int bool_bottomcheck = 0;
+
+	double center_y = ymin + (maxlength / 2);
+	cout << "center y is " << center_y << endl;
+
+	//array that stores all bottom octants voxel id..
+	std::vector<int> bottom;
+	//map that map voxelid to voxeltype and its center cordinate..
+	std::map<int, std::pair<char, std::vector<double>>> bmap;
+	//max number of octants formed
+	int maxoct = dimension * dimension * dimension;
+	cout << "maxoct  " << maxoct << endl;
+	for (int z = 0; z < dimension; z++) {
+		cord[2] = duplicate[2] + z * voxelsize;
+		for (int y = 0; y < dimension; y++) {
+			cord[1] = duplicate[1] + y * voxelsize;
+			for (int x = 0; x < dimension; x++) {
+				cord[0] = duplicate[0] + x * voxelsize;
+				cout << "voxelid " << voxelid << " cordinates  (" << cord[0] << " " << cord[1] << " " << cord[2] << ") " << endl;
+				double center[3];
+				filltest(cord[0], cord[1], cord[2], center);
+				//drawing for 60th voxel
+				
+
+				//insdie,outside,partial
+				double minb[3], maxb[3];
+				minb[0] = cord[0] - ((0.5) * voxelsize);
+				minb[1] = cord[1] - ((0.5) * voxelsize);
+				minb[2] = cord[2] - ((0.5) * voxelsize);
+				//cout << "minbbbb " << minb[0] << " " << minb[1] << " " << minb[2] << endl;
+				maxb[0] = cord[0] + ((0.5) * voxelsize);
+				maxb[1] = cord[1] + ((0.5) * voxelsize);
+				maxb[2] = cord[2] + ((0.5) * voxelsize);
+
+				double vertices[8][3];
+				GetOctantVertices(minb, maxb, vertices);
+
+
+				int inside = 0;
+				int outside = 0;
+
+				vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+				double test0[3];
+				double test1[3];
+				double test2[3];
+				double test3[3];
+				double test4[3];
+				double test5[3];
+				double test6[3];
+				double test7[3];
+
+
+				filltest(vertices[0][0], vertices[0][1], vertices[0][2], test0);
+				points->InsertNextPoint(test0);
+				filltest(vertices[1][0], vertices[1][1], vertices[1][2], test1);
+				points->InsertNextPoint(test1);
+				filltest(vertices[2][0], vertices[2][1], vertices[2][2], test2);
+				points->InsertNextPoint(test2);
+				filltest(vertices[3][0], vertices[3][1], vertices[3][2], test3);
+				points->InsertNextPoint(test3);
+				filltest(vertices[4][0], vertices[4][1], vertices[4][2], test4);
+				points->InsertNextPoint(test4);
+				filltest(vertices[5][0], vertices[5][1], vertices[5][2], test5);
+				points->InsertNextPoint(test5);
+				filltest(vertices[6][0], vertices[6][1], vertices[6][2], test6);
+				points->InsertNextPoint(test6);
+				filltest(vertices[7][0], vertices[7][1], vertices[7][2], test7);
+				points->InsertNextPoint(test7);
+
+				//cout << "test0" << test0[0] << " " << test0[1] << " " << test0[2] << endl;
+
+
+				/*vtkSmartPointer<vtkPoints> points1 = vtkSmartPointer<vtkPoints>::New();
+				double test[3] = {2.5,5.5,5.5};
+				points1->InsertNextPoint(test);
+				vtkSmartPointer<vtkPolyData> pointsPolydata1 = vtkSmartPointer<vtkPolyData>::New();;
+				pointsPolydata1->SetPoints(points1);
+				vtkSmartPointer<vtkSelectEnclosedPoints> selectEnclosedPoints1 = vtkSmartPointer<vtkSelectEnclosedPoints>::New();;
+				selectEnclosedPoints1->SetInputData(pointsPolydata1);
+				selectEnclosedPoints1->SetSurfaceData(shape);
+				selectEnclosedPoints1->Update();
+				if (selectEnclosedPoints1->IsInside(0) == 1) cout << "iiiiiiinside";
+				else cout << "outsideeeee";*/
+
+				vtkSmartPointer<vtkPolyData> pointsPolydata = vtkSmartPointer<vtkPolyData>::New();;
+				pointsPolydata->SetPoints(points);
+				vtkSmartPointer<vtkSelectEnclosedPoints> selectEnclosedPoints = vtkSmartPointer<vtkSelectEnclosedPoints>::New();;
+				selectEnclosedPoints->SetInputData(pointsPolydata);
+				selectEnclosedPoints->SetSurfaceData(shape);
+				selectEnclosedPoints->Update();
+
+				for (unsigned int xx = 0; xx < 8; xx++) {
+
+					if (selectEnclosedPoints->IsInside(xx) == 1)
+					{
+						inside++;
+					}
+					else
+					{
+						outside++;
+					}
+
+				}
+
+				std::vector<double> c{ cord[0],cord[1],cord[2] };
+				int boolcheck = 0;
+
+				if (inside == 8) {
+					insideoct++;
+					cout << "insideoctant" << endl;
+					boolcheck = 0;
+					bmap[voxelid] = std::make_pair('I', c);
+				}
+				else {
+					if (outside == 8) {
+						outsideoct++;
+						cout << "outsideocatnat" << endl;
+						boolcheck = 1;
+						bmap[voxelid] = std::make_pair('O', c);
+					}
+					else {
+						partialoct++;
+						cout << "partialoctant" << endl;
+						boolcheck = 2;
+						bmap[voxelid] = std::make_pair('P', c);
+
+						
+						int xxx = bottomvoxel(voxelid, voxelsize, bmap, maxoct);
+						if (xxx != -1) {
+							char c = bmap[xxx].first;
+							if (c == 'O') bottom.push_back(voxelid);
+						}
+
+						/*if (cord[1] <= center_y) {
+							cout << "bottom octant spotted" << endl;
+							bottom.push_back(voxelid);
+						}*/
+					}
+				}
+
+
+
+
+
+
+
+				if (boolcheck == 2 && bottomcheck == 0) bottomcheck = 1;
+				if (boolcheck == 0 && bottomcheck == 1) bottomcheck = 2;
+				if (boolcheck == 2 && bottomcheck == 2) {
+					bottomcheck = 3;
+				}
+				if (boolcheck == 0 && bottomcheck == 3) bottomcheck = 2;
+				if (boolcheck == 1 && bottomcheck == 3) bottomcheck = 2;
+
+				if (bottomcheck == 3) { 
+					//bottom.push_back(voxelid);
+					//cout << "   above this is a  bottom octants " << endl;
+				}
+				//voxelid to which support is drawn;
+				//int vid = 66;
+				//cout << " vid is        " << vid << endl;
+
+				//voxelid== 5,35,60 && (boolcheck==1 ||voxelid==60 )
+				//voxelid >= 60 && voxelid <= 125 && (voxelid) % 1 == 0 && (boolcheck == 1 || voxelid == 60)
+				///////
+				///////
+
+				
+				///////
+				///////
+
+				voxelid++;
+			}
+		}
+	}
+
+
+	cout << "no of inside octant" << insideoct << endl;
+	cout << "no of outside octant" << outsideoct << endl;
+	cout << "no of partial octant" << partialoct << endl;
+	cout << bottom.size() << endl;
+	//int maxoct = insideoct + outsideoct + partialoct;
+
+	int x = leftvoxel(67, voxelsize, bmap,maxoct);
+	if (x != -1) cout << x << endl;
+	else cout << "left voxel not exist" << endl;
+	
+	int xx = rightvoxel(67, voxelsize, bmap, maxoct);
+	if (xx != -1) cout << xx << endl;
+	else cout << "right voxel not exist" << endl;
+
+	int xxx = bottomvoxel(67, voxelsize, bmap, maxoct);
+	if (xxx != -1) cout << xxx << endl;
+	else cout << "bottom voxel not exist" << endl;
+
+	//front
+	int xxxx = frontvoxel(67, voxelsize, bmap, maxoct);
+	if (xxxx != -1) cout << xxxx << endl;
+	else cout << "front voxel not exist" << endl;
+	//back
+	int xxxxx = backvoxel(67, voxelsize, bmap, maxoct);
+	if (xxxxx != -1) cout << xxxxx << endl;
+	else cout << "back voxel not exist" << endl;
+
+
+	int minus = std::cbrt(maxoct);
+	cout << "minus" << minus << endl;
+	
+
+
+	// A renderer and render window
+	vtkNew<vtkRenderer> renderer;
+	vtkNew<vtkRenderWindow> renderWindow;
+	renderWindow->AddRenderer(renderer);
+
+
+	// An interactor
+	vtkNew<vtkRenderWindowInteractor> renderWindowInteractor;
+	renderWindowInteractor->SetRenderWindow(renderWindow);
+	
+	
+	for (int i = 0; i < bottom.size(); i++) {
+		vtkSmartPointer<vtkPoints> linepoints = vtkSmartPointer<vtkPoints>::New();
+		vtkSmartPointer<vtkPoints> line1 = vtkSmartPointer<vtkPoints>::New();
+		vtkSmartPointer<vtkPoints> line2 = vtkSmartPointer<vtkPoints>::New();
+		vtkSmartPointer<vtkPoints> line3 = vtkSmartPointer<vtkPoints>::New();
+		vtkSmartPointer<vtkPoints> line4 = vtkSmartPointer<vtkPoints>::New();
+
+
+		int vid = bottom[i];
+		
+
+		//cout << vid << endl;
+		int no_of_points = 0;
+		//traverse to add points in linepoints
+		// 5 is a variable value
+		for (int j = vid; j >= 1; j -= minus) {
+			//cout << j << endl;
+			//stop condition if bottom reached
+			std::vector<double> cord = bmap[j].second;
+			// 1 cond stop reached 2 cond outside oct excempt when j=vid p oct
+			
+			if (j == vid || bmap[j].first == 'O') {
+				double linep[3];
+				//cout << j << endl;
+				//cout << cord[0] << cord[1] << cord[2] << endl;
+				filltest(cord[0], cord[1], cord[2], linep);
+				linepoints->InsertNextPoint(linep);
+				no_of_points++;
+				if (cord[1] == bottom_y) break;
+			}
+		}
+
+		vtkNew<vtkPolyLine> polyLine;
+		polyLine->GetPointIds()->SetNumberOfIds(no_of_points);
+		for (unsigned int i = 0; i < no_of_points; i++)
+		{
+			polyLine->GetPointIds()->SetId(i, i);
+		}
+
+		// Create a cell array to store the lines in and add the lines to it
+		vtkNew<vtkCellArray> cells;
+		cells->InsertNextCell(polyLine);
+
+		// Create a polydata to store everything in
+		vtkNew<vtkPolyData> linepolyData;
+
+		// Add the points to the dataset
+		linepolyData->SetPoints(linepoints);
+
+		// Add the lines to the dataset
+		linepolyData->SetLines(cells);
+
+		// Setup actor and mapper
+		vtkNew<vtkPolyDataMapper> linemapper;
+		linemapper->SetInputData(linepolyData);
+
+		vtkNew<vtkActor> lineactor;
+		lineactor->SetMapper(linemapper);
+		lineactor->GetProperty()->SetColor(colors->GetColor3d("black").GetData());
+
+		renderer->AddActor(lineactor);
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	//drawing 60th voxel
+	/*linepoints->InsertNextPoint(1.5, 0.5, 3.5);
+	linepoints->InsertNextPoint(1.5, 1.5, 3.5);
+	no_of_points = 2;*/
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	// Create mapper and actor for the bounding box
+	vtkSmartPointer<vtkPolyDataMapper> mapper1 = vtkSmartPointer<vtkPolyDataMapper>::New();
+	mapper1->SetInputData(cubeSource->GetOutput());
+	vtkSmartPointer<vtkActor> actor1 = vtkSmartPointer<vtkActor>::New();
+	actor1->GetProperty()->SetOpacity(0.3);
+	actor1->SetMapper(mapper1);
+
+	// Add the actors to the scene
+	renderer->AddActor(triangleActor);
+	//renderer->AddActor(octreeActor);
+	//renderer->AddActor(stlactor);
+	renderer->AddActor(actor1);
+	/*renderer->AddActor(lineactor);
+	renderer->AddActor(lineactor1);
+	renderer->AddActor(lineactor2);
+	renderer->AddActor(lineactor3);
+	renderer->AddActor(lineactor4);*/
+	renderer->SetBackground(colors->GetColor3d("MidnightBlue").GetData());
+
+
+
+	// Render an image (lights and cameras are created automatically)
+	renderWindow->SetWindowName("OctreeVisualize");
+	renderWindow->SetSize(600, 600);
+	renderWindow->Render();
+
+	//vtkNew<vtkSliderRepresentation2D> sliderRep;
+	//sliderRep->SetMinimumValue(0);
+	////sliderRep->SetMaximumValue(octree->GetLevel());
+	//sliderRep->SetValue(0);
+	//sliderRep->SetTitleText("Level");
+	//sliderRep->GetPoint1Coordinate()->SetCoordinateSystemToNormalizedDisplay();
+	//sliderRep->GetPoint1Coordinate()->SetValue(.2, .2);
+	//sliderRep->GetPoint2Coordinate()->SetCoordinateSystemToNormalizedDisplay();
+	//sliderRep->GetPoint2Coordinate()->SetValue(.8, .2);
+	//sliderRep->SetSliderLength(0.075);
+	//sliderRep->SetSliderWidth(0.05);
+	//sliderRep->SetEndCapLength(0.05);
+	//sliderRep->GetTitleProperty()->SetColor(
+	//	colors->GetColor3d("Beige").GetData());
+	//sliderRep->GetCapProperty()->SetColor(
+	//	colors->GetColor3d("MistyRose").GetData());
+	//sliderRep->GetSliderProperty()->SetColor(
+	//	colors->GetColor3d("LightBlue").GetData());
+	//sliderRep->GetSelectedProperty()->SetColor(
+	//	colors->GetColor3d("Violet").GetData());
+
+
+
+	//vtkNew<vtkSliderWidget> sliderWidget;
+	//sliderWidget->SetInteractor(renderWindowInteractor);
+	//sliderWidget->SetRepresentation(sliderRep);
+	//sliderWidget->SetAnimationModeToAnimate();
+	//sliderWidget->EnabledOn();
+
+
+	//vtkNew<vtkSliderCallback> callback;
+	////callback->Octree = octree;
+	////callback->PolyData = polydata;
+	//callback->Renderer = renderer;
+
+	//sliderWidget->AddObserver(vtkCommand::InteractionEvent, callback);
+
+	renderWindowInteractor->Initialize();
+	renderWindow->Render();
+	renderWindowInteractor->Start();
+	return EXIT_SUCCESS;
+}
