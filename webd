@@ -1,0 +1,43 @@
+//html
+
+<div class = "box1">
+    <h6>text</h6>
+</div>
+<div class = "box2">
+    
+</div>
+<div class = "box3">
+    
+</div>
+
+
+//css
+
+.box1{
+  height: 90px;
+  width: 90px;
+  background-color: blue;
+  display: inline-block;
+  border-style: solid;
+  border-width: 20px;
+  border-color: red;
+  border-left: 20px solid green;
+  border-radius: 20px;
+  text-align:center;
+  padding: 2px;
+  margin-left: 20px;
+  margin-top: -10px;
+}
+
+.box2{
+  height: 90px;
+  width: 90px;
+  background-color: green;
+  display: inline-block;
+}
+.box3{
+  height: 90px;
+  width: 90px;
+  background-color: black;
+  display: inline-block;
+}
